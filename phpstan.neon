@@ -1,0 +1,12 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - src
+    level: 8
+    ignoreErrors:
+        -
+            # Consumer-facing trait (apps `use IsShareable`); never used inside src.
+            identifier: trait.unused
+            path: src/Concerns/IsShareable.php

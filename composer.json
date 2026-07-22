@@ -1,0 +1,67 @@
+{
+    "name": "robinsonryan/mansio",
+    "description": "Secure, versioned, trackable delivery of any shareable resource via public links for Laravel.",
+    "keywords": ["laravel", "share", "delivery", "versioning", "public-links", "audit"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Ryan Robinson"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "illuminate/contracts": "^13.0",
+        "illuminate/database": "^13.0",
+        "illuminate/http": "^13.0",
+        "illuminate/support": "^13.0",
+        "league/flysystem": "^3.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.0",
+        "laravel/pint": "^1.18",
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-laravel": "^4.0",
+        "rector/rector": "^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "RobinsonRyan\\Mansio\\": "src/",
+            "RobinsonRyan\\Mansio\\Database\\Factories\\": "database/factories/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "RobinsonRyan\\Mansio\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "RobinsonRyan\\Mansio\\MansioServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "scripts": {
+        "test": "pest",
+        "test:coverage": "pest --coverage",
+        "lint": "pint",
+        "lint:check": "pint --test",
+        "analyze": "phpstan analyse",
+        "refactor": "rector process",
+        "refactor:check": "rector process --dry-run",
+        "quality": [
+            "@lint:check",
+            "@analyze",
+            "@test"
+        ]
+    }
+}

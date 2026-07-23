@@ -23,8 +23,8 @@ never proposal/quote/invoice semantics. No markdown→PDF rendering (that's app/
 ## Architecture — interface-first
 
 - `Contracts/` — the seams: `Shareable`, `AccessGuard`, `ContentStore`,
-  `TokenGenerator`, `PreviewGenerator`. Consumers and swappable backends bind to
-  these.
+  `TokenGenerator`, `PreviewGenerator`, `ShareViewRenderer`. Consumers and
+  swappable backends bind to these.
 - `Concerns/IsShareable` — convenience implementation of `Shareable` for Eloquent
   models (`mansioVersions`/`mansioShares` relations, `publishVersion`/`share`
   helpers, overridable `mansioTitle`/`mansioOwner`/`mansioDefaultMime`).
@@ -53,6 +53,12 @@ the provider under `config('mansio.route')` with **no app auth guard** —
 `ResolveShareMiddleware` + the guard pipeline are the only gate. Bad tokens 404,
 never 403 (never confirm a link existed).
 
+The two HTML surfaces (`show` landing + `unlock` challenge) render through the
+`ShareViewRenderer` seam — default `Http/BladeShareViewRenderer` (the shipped
+Blade views). Apps rebind it (Inertia/Livewire/themed Blade) to own presentation
+**without** duplicating the controller's resolve/guard/audit flow. `download` /
+`preview` stream bytes and never touch the renderer.
+
 ## Guard pipeline (extension point)
 
 Access rules are `AccessGuard` strategies returning a `GuardResult`
@@ -65,11 +71,12 @@ config — never widen a boolean column list.
 ## UUID7 policy (own concern)
 
 Use `Concerns/HasUuid7PrimaryKey` on all package models. It sets
-`$incrementing = false; $keyType = 'string';` and pre-fetches a value via
-`DB::scalar('SELECT uuidv7()::text')` in a `creating` hook, with the migration's
-`default(DB::raw('uuidv7()'))` as the DB source of truth. **Never** generate UUIDs
-PHP-side (`Str::uuid7()` / Ramsey) and **never** reuse the older afwd `HasUuid7` /
-stock `HasUuids` patterns the afwd CLAUDE.md flags for removal.
+`$incrementing = false; $keyType = 'string';` and overrides `performInsert()` to
+omit the id and read the DB-minted key back via `INSERT ... RETURNING` in one
+roundtrip (Postgres' `default(DB::raw('uuidv7()'))` is the source of truth). An
+explicit id (imports/tests) falls through to the standard insert path. **Never**
+generate UUIDs PHP-side (`Str::uuid7()` / Ramsey) and **never** reuse the older
+afwd `HasUuid7` / stock `HasUuids` patterns the afwd CLAUDE.md flags for removal.
 
 ## Testing (Postgres, not sqlite)
 

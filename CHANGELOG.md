@@ -5,9 +5,29 @@ All notable changes to `robinsonryan/mansio` are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.1]
 
-Initial build. Not yet tagged.
+### Added
+
+- **`ShareViewRenderer` seam.** The recipient-facing HTML surfaces (landing page
+  and unlock challenge) now render through a bound `ShareViewRenderer` contract
+  instead of calling `view()` directly. The default `BladeShareViewRenderer`
+  preserves the shipped Blade views (and the `vendor/mansio` publish override).
+  Consuming apps may bind their own implementation (Inertia, Livewire, a themed
+  Blade) without forking the controller's resolve / guard / audit logic — the
+  controller stays the single source of truth for access control.
+
+### Changed
+
+- **`HasUuid7PrimaryKey` now hydrates the key via `INSERT ... RETURNING`** in a
+  single roundtrip (a `performInsert()` override) rather than pre-fetching
+  `SELECT uuidv7()` before each insert. Postgres still mints the UUID from the
+  column default; PHP never generates it. Behaviour is unchanged for callers
+  (an explicit id still uses the standard insert path).
+
+## [0.1.0]
+
+Initial release.
 
 ### Added
 

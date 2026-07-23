@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace RobinsonRyan\Mansio\Http\Controllers;
 
-use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -13,6 +12,7 @@ use RobinsonRyan\Mansio\Actions\RecordAccess;
 use RobinsonRyan\Mansio\Contracts\ContentStore;
 use RobinsonRyan\Mansio\Contracts\PreviewGenerator;
 use RobinsonRyan\Mansio\Contracts\Shareable;
+use RobinsonRyan\Mansio\Contracts\ShareViewRenderer;
 use RobinsonRyan\Mansio\Events\ShareUnlockFailed;
 use RobinsonRyan\Mansio\Exceptions\ShareNotAccessible;
 use RobinsonRyan\Mansio\Exceptions\UnlockRequired;
@@ -22,6 +22,7 @@ use RobinsonRyan\Mansio\Models\Share;
 use RobinsonRyan\Mansio\Models\ShareEvent;
 use RobinsonRyan\Mansio\Models\Version;
 use RobinsonRyan\Mansio\Support\ShareContext;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -35,16 +36,17 @@ final class ShareController
         private readonly Mansio $mansio,
         private readonly RecordAccess $recordAccess,
         private readonly ContentStore $store,
+        private readonly ShareViewRenderer $renderer,
     ) {}
 
-    public function show(Request $request, string $token): View|RedirectResponse
+    public function show(Request $request, string $token): Response|RedirectResponse
     {
         $share = $this->share($request);
 
         try {
             $share = $this->mansio->resolve($token, $this->context($request, $share));
         } catch (UnlockRequired $e) {
-            return $this->renderUnlock($token, $e->challengeType);
+            return $this->renderUnlock($request, $token, $e->challengeType);
         } catch (ShareNotAccessible) {
             abort(404);
         }
@@ -57,8 +59,7 @@ final class ShareController
             'version_id' => $version?->getKey(),
         ]);
 
-        // @phpstan-ignore argument.type (package-namespaced view, not resolvable at analysis time)
-        return view('mansio::show', [
+        return $this->renderer->show($request, [
             'title' => $this->title($share),
             'currentVersion' => $version,
             'downloadUrl' => route('mansio.download', $share->token),
@@ -124,7 +125,7 @@ final class ShareController
         return $this->streamVersion($share, $version, disposition: 'inline');
     }
 
-    public function unlock(Request $request, string $token): RedirectResponse|View
+    public function unlock(Request $request, string $token): RedirectResponse|Response
     {
         $share = $this->share($request);
 
@@ -133,7 +134,7 @@ final class ShareController
         $decaySeconds = (int) config('mansio.password.throttle.decay_minutes', 10) * 60;
 
         if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
-            return $this->renderUnlock($token, 'password', __('Too many attempts. Please try again later.'));
+            return $this->renderUnlock($request, $token, 'password', __('Too many attempts. Please try again later.'));
         }
 
         $credentials = [
@@ -147,12 +148,12 @@ final class ShareController
             RateLimiter::hit($key, $decaySeconds);
             $this->recordFailure($share, $request, $e->challengeType);
 
-            return $this->renderUnlock($token, $e->challengeType, __('Please provide the required credentials.'));
+            return $this->renderUnlock($request, $token, $e->challengeType, __('Please provide the required credentials.'));
         } catch (ShareNotAccessible $e) {
             RateLimiter::hit($key, $decaySeconds);
             $this->recordFailure($share, $request, $this->challengeFromReason($e->getMessage()));
 
-            return $this->renderUnlock($token, $this->challengeFromReason($e->getMessage()), __('That was incorrect. Please try again.'));
+            return $this->renderUnlock($request, $token, $this->challengeFromReason($e->getMessage()), __('That was incorrect. Please try again.'));
         }
 
         RateLimiter::clear($key);
@@ -207,10 +208,9 @@ final class ShareController
         return str_contains($reason, 'otp') ? 'otp' : 'password';
     }
 
-    private function renderUnlock(string $token, string $challengeType, ?string $error = null): View
+    private function renderUnlock(Request $request, string $token, string $challengeType, ?string $error = null): Response
     {
-        // @phpstan-ignore argument.type (package-namespaced view, not resolvable at analysis time)
-        return view('mansio::unlock', [
+        return $this->renderer->unlock($request, [
             'token' => $token,
             'challengeType' => $challengeType,
             'error' => $error,

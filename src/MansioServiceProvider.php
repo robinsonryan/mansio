@@ -8,7 +8,9 @@ use Illuminate\Contracts\Filesystem\Factory as FilesystemFactory;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use RobinsonRyan\Mansio\Contracts\ContentStore;
+use RobinsonRyan\Mansio\Contracts\ShareViewRenderer;
 use RobinsonRyan\Mansio\Contracts\TokenGenerator;
+use RobinsonRyan\Mansio\Http\BladeShareViewRenderer;
 use RobinsonRyan\Mansio\Storage\FlysystemContentStore;
 use RobinsonRyan\Mansio\Support\Base62TokenGenerator;
 
@@ -30,6 +32,10 @@ final class MansioServiceProvider extends ServiceProvider
                 (string) config('mansio.store.path', 'mansio'),
             );
         });
+
+        // Presentation seam: apps may rebind this (Inertia, Livewire, a themed
+        // Blade) without forking the controller's resolve / guard / audit logic.
+        $this->app->bind(ShareViewRenderer::class, BladeShareViewRenderer::class);
 
         $this->app->singleton(Mansio::class);
         $this->app->alias(Mansio::class, 'mansio');

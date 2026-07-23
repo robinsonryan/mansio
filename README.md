@@ -260,6 +260,7 @@ Emitted for app-side listeners (notifications, audit mirrors, webhooks):
 | **Share** | A public link (random token) pointing at a shareable. Serves the current version, or a pinned one. Carries its own access settings — many shares per shareable. |
 | **AccessGuard** | A single access rule evaluated on every hit. Ordered, config-driven pipeline. |
 | **ContentStore** | Storage backend abstraction for artifact bytes. |
+| **ShareViewRenderer** | Renders the recipient landing page + unlock challenge. Default ships Blade; rebind for Inertia / Livewire / a themed surface without touching access control. |
 | **ShareEvent** | Audit record: viewed / downloaded / unlock / revoked / expired, with IP + UA + timestamp. |
 
 ## Testing
